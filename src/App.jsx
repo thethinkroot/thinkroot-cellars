@@ -61,15 +61,15 @@ export default function App() {
       });
 
       // Auto-detect imported wine from country of origin field
-      if (data.countryOfOrigin) {
-        const domestic = ['united states', 'usa', 'u.s.a', 'us'];
-        const isImport = !domestic.some(d =>
-          data.countryOfOrigin.toLowerCase().includes(d)
-        );
-        if (isImport) {
-          updates.isImport = true;
-          filled.isImport = true;
-        }
+      // Also detect from bottler name containing "import" when no country is stated
+      const domestic = ['united states', 'usa', 'u.s.a', 'us'];
+      const isImport = data.countryOfOrigin
+        ? !domestic.some(d => data.countryOfOrigin.toLowerCase().includes(d))
+        : (data.bottlerName || '').toLowerCase().includes('import');
+
+      if (isImport) {
+        updates.isImport = true;
+        filled.isImport = true;
       }
 
       setApplicationData(prev => ({ ...prev, ...updates }));

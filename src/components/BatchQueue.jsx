@@ -123,13 +123,44 @@ export default function BatchQueue() {
       );
 
       try {
-        const formData = new FormData();
-        formData.append('label', items[i].file);
-        formData.append('applicationData', JSON.stringify({}));
+        // Step 1 — extract fields from label
+        const extractForm = new FormData();
+        extractForm.append('label', items[i].file);
+
+        const extractRes = await fetch('/api/extract', {
+          method: 'POST',
+          body: extractForm,
+        });
+
+        const extracted = extractRes.ok ? await extractRes.json() : {};
+
+        // Step 2 — detect import from country of origin or bottler name
+        // Labels missing country of origin but showing "Imported by" trigger
+        // the country of origin check per 19 CFR part 134
+        const domestic = ['united states', 'usa', 'u.s.a', 'us'];
+        const isImport = extracted.countryOfOrigin
+          ? !domestic.some(d =>
+              extracted.countryOfOrigin.toLowerCase().includes(d))
+          : (extracted.bottlerName || '').toLowerCase().includes('import');
+
+        // Step 3 — verify using extracted fields as application data
+        // Batch mode checks format compliance and TTB rule-based fields
+        // without requiring manual application data entry per label
+        const verifyForm = new FormData();
+        verifyForm.append('label', items[i].file);
+        verifyForm.append('applicationData', JSON.stringify({
+          brandName: extracted.brandName || '',
+          classType: extracted.classType || '',
+          alcoholContent: extracted.alcoholContent || '',
+          netContents: extracted.netContents || '',
+          bottlerName: extracted.bottlerName || '',
+          bottlerAddress: extracted.bottlerAddress || '',
+          isImport,
+        }));
 
         const res = await fetch('/api/verify', {
           method: 'POST',
-          body: formData,
+          body: verifyForm,
         });
 
         const data = await res.json();
@@ -268,130 +299,3 @@ export default function BatchQueue() {
                           borderRadius: '3px',
                           border: '1px solid rgba(197, 165, 114, 0.2)',
                           flexShrink: 0
-                        }}
-                      />
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        color: 'var(--cream-dim)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {item.result?.extracted?.brandName || item.filename}
-                      </div>
-                      {item.result?.extracted?.brandName && (
-                        <div style={{
-                          fontSize: '11px',
-                          color: 'var(--muted)',
-                          marginTop: '2px'
-                        }}>
-                          {item.filename}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ flexShrink: 0 }}>
-                      {item.status === 'processing' ? (
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}>
-                          <div
-                            className="spinner"
-                            style={{
-                              width: '14px',
-                              height: '14px',
-                              borderWidth: '1.5px'
-                            }}
-                          />
-                          <span style={{
-                            fontSize: '11px',
-                            color: 'var(--copper)'
-                          }}>
-                            Checking...
-                          </span>
-                        </div>
-                      ) : item.status === 'pass' ? (
-                        <span style={{
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          letterSpacing: '0.06em',
-                          color: 'var(--pass)',
-                          background: 'var(--pass-bg)',
-                          border: '1px solid var(--pass-border)',
-                          padding: '3px 10px',
-                          borderRadius: '20px'
-                        }}>
-                          ✓ Cleared
-                        </span>
-                      ) : item.status === 'fail' ? (
-                        <span style={{
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          letterSpacing: '0.06em',
-                          color: 'var(--fail)',
-                          background: 'var(--fail-bg)',
-                          border: '1px solid var(--fail-border)',
-                          padding: '3px 10px',
-                          borderRadius: '20px'
-                        }}>
-                          ✗ {item.result?.flagCount} Flag{item.result?.flagCount !== 1 ? 's' : ''}
-                        </span>
-                      ) : (
-                        <span style={{
-                          fontSize: '11px',
-                          color: 'var(--muted)',
-                          letterSpacing: '0.04em'
-                        }}>
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <BatchResultDetail item={item} />
-                </div>
-              ))}
-            </div>
-
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              marginTop: '20px',
-              flexWrap: 'wrap',
-              alignItems: 'center'
-            }}>
-              {pendingCount > 0 && (
-                <button
-                  className="btn-verify"
-                  style={{ marginTop: 0, flex: 1, minWidth: '160px' }}
-                  onClick={runBatch}
-                  disabled={running}
-                >
-                  {running
-                    ? 'Verifying...'
-                    : `Verify ${pendingCount} Label${pendingCount !== 1 ? 's' : ''}`}
-                </button>
-              )}
-
-              {hasResults && (
-                <button className="btn-export" onClick={exportCSV}>
-                  Export CSV
-                </button>
-              )}
-
-              {!running && items.length > 0 && (
-                <button className="btn-export" onClick={clearAll}>
-                  Clear All
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
