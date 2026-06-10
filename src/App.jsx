@@ -6,6 +6,8 @@ import BatchQueue from './components/BatchQueue';
 export default function App() {
   const [mode, setMode] = useState('single');
   const [labelFile, setLabelFile] = useState(null);
+  const [extracting, setExtracting] = useState(false);
+  const [extracted, setExtracted] = useState(null);
   const [applicationData, setApplicationData] = useState({
     brandName: '',
     classType: '',
@@ -18,6 +20,45 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState(null);
+
+  async function handleFileSelect(file) {
+    setLabelFile(file);
+    setResult(null);
+    setError(null);
+    setExtracted(null);
+
+    setExtracting(true);
+
+    const formData = new FormData();
+    formData.append('label', file);
+
+    try {
+      const res = await fetch('/api/extract', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Extraction failed');
+
+      const data = await res.json();
+      setExtracted(data);
+
+      setApplicationData(prev => ({
+        ...prev,
+        brandName: data.brandName || prev.brandName,
+        classType: data.classType || prev.classType,
+        alcoholContent: data.alcoholContent || prev.alcoholContent,
+        netContents: data.netContents || prev.netContents,
+        bottlerName: data.bottlerName || prev.bottlerName,
+        bottlerAddress: data.bottlerAddress || prev.bottlerAddress,
+      }));
+
+    } catch (err) {
+      // Silent fail on extraction — agent can still fill manually
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   async function handleVerify() {
     if (!labelFile) return;
@@ -54,7 +95,7 @@ export default function App() {
     setApplicationData(prev => ({ ...prev, [field]: value }));
   }
 
-  const canVerify = labelFile && applicationData.brandName && !verifying;
+  const canVerify = labelFile && applicationData.brandName && !verifying && !extracting;
 
   return (
     <>
@@ -70,9 +111,8 @@ export default function App() {
         <div className="app-intro">
           <h1>Label Compliance Review</h1>
           <p>
-            Upload a label image and enter the application data.
-            The tool checks each required field against TTB regulations
-            and flags anything that needs agent review.
+            Upload a label image. Fields populate automatically from the label.
+            Review, correct if needed, then run the compliance check.
           </p>
         </div>
 
@@ -97,12 +137,42 @@ export default function App() {
               <div className="card-title">Label Image</div>
               <UploadZone
                 file={labelFile}
-                onFileSelect={setLabelFile}
+                onFileSelect={handleFileSelect}
               />
+              {extracting && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginTop: '14px',
+                  fontSize: '13px',
+                  color: 'var(--copper-light)'
+                }}>
+                  <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '1.5px', margin: 0 }} />
+                  Reading label fields...
+                </div>
+              )}
             </div>
 
             <div className="card">
-              <div className="card-title">Application Data</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div className="card-title" style={{ margin: 0 }}>Application Data</div>
+                {extracted && !extracting && (
+                  <span style={{
+                    fontSize: '11px',
+                    color: 'var(--pass)',
+                    background: 'var(--pass-bg)',
+                    border: '1px solid var(--pass-border)',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    fontWeight: '500',
+                    letterSpacing: '0.04em'
+                  }}>
+                    Fields populated from label
+                  </span>
+                )}
+              </div>
+
               <div className="field-grid">
                 <div className="field-group">
                   <label>Brand Name</label>
@@ -187,7 +257,7 @@ export default function App() {
                 onClick={handleVerify}
                 disabled={!canVerify}
               >
-                {verifying ? 'Verifying...' : 'Run Compliance Check'}
+                {verifying ? 'Verifying...' : extracting ? 'Reading label...' : 'Run Compliance Check'}
               </button>
             </div>
 
@@ -200,16 +270,12 @@ export default function App() {
 
             {error && (
               <div className="card">
-                <div style={{
-                  fontSize: '13px',
-                  color: '#D47A7A',
-                  lineHeight: '1.6'
-                }}>
+                <div style={{ fontSize: '13px', color: '#D47A7A', lineHeight: '1.6' }}>
                   <strong style={{ display: 'block', marginBottom: '6px' }}>
                     Verification could not complete
                   </strong>
-                  {error.includes('parse') || error.includes('unclear')
-                    ? 'The image did not contain readable label data. Upload a clear, straight-on photo of the wine label — not a screenshot, not a document, not a photo of a computer screen.'
+                  {error.includes('parse') || error.includes('unclear') || error.includes('extracted')
+                    ? 'The image did not contain readable label data. Upload a clear, straight-on photo of the wine label.'
                     : error.includes('authentication') || error.includes('API')
                     ? 'Service configuration error. Please contact the administrator.'
                     : error

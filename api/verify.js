@@ -34,7 +34,7 @@ Return format:
   "countryOfOrigin": "..."
 }`;
 
-async function verifyLabel(imageBuffer, applicationData, mimeType = 'image/jpeg') {
+async function extractLabel(imageBuffer, mimeType = 'image/jpeg') {
   const base64Image = imageBuffer.toString('base64');
 
   const response = await client.messages.create({
@@ -62,15 +62,17 @@ async function verifyLabel(imageBuffer, applicationData, mimeType = 'image/jpeg'
   });
 
   const rawText = response.content[0].text.trim();
-  let extracted;
 
   try {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    extracted = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
   } catch {
-    throw new Error('Label image received but fields could not be extracted. Please try a clearer photo.');
+    throw new Error('Label image received but fields could not be extracted.');
   }
+}
 
+async function verifyLabel(imageBuffer, applicationData, mimeType = 'image/jpeg') {
+  const extracted = await extractLabel(imageBuffer, mimeType);
   return runComplianceChecks(extracted, applicationData);
 }
 
@@ -133,4 +135,4 @@ function runComplianceChecks(extracted, application) {
   };
 }
 
-module.exports = { verifyLabel };
+module.exports = { verifyLabel, extractLabel };
