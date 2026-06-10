@@ -218,6 +218,19 @@ export default function BatchQueue() {
       <div className="card">
         <div className="card-title">Batch Verification</div>
 
+        <p style={{
+          fontSize: '12px',
+          color: 'var(--muted)',
+          marginBottom: '20px',
+          lineHeight: '1.6',
+          borderLeft: '2px solid rgba(197, 165, 114, 0.3)',
+          paddingLeft: '12px'
+        }}>
+          Batch mode checks TTB format compliance across multiple labels — government
+          warning, required fields, and country of origin for imports. To compare a
+          label against a specific COLA application record, use Single Label mode.
+        </p>
+
         <div
           className="upload-zone"
           style={{ marginBottom: '20px' }}
