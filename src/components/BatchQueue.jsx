@@ -133,11 +133,16 @@ export default function BatchQueue() {
 
         const extracted = extractRes.ok ? await extractRes.json() : {};
 
+        // Import detection: matches single label mode logic
+        // isImportedProduct field catches "Imported by" phrase on label
+        // even when bottler name is extracted without the prefix
         const domestic = ['united states', 'usa', 'u.s.a', 'us'];
-        const isImport = extracted.countryOfOrigin
-          ? !domestic.some(d =>
-              extracted.countryOfOrigin.toLowerCase().includes(d))
-          : (extracted.bottlerName || '').toLowerCase().includes('import');
+        const isImport =
+          extracted.isImportedProduct === true ||
+          (extracted.countryOfOrigin
+            ? !domestic.some(d => extracted.countryOfOrigin.toLowerCase().includes(d))
+            : false) ||
+          (extracted.bottlerName || '').toLowerCase().includes('import');
 
         const verifyForm = new FormData();
         verifyForm.append('label', items[i].file);
@@ -226,9 +231,11 @@ export default function BatchQueue() {
           borderLeft: '2px solid rgba(197, 165, 114, 0.3)',
           paddingLeft: '12px'
         }}>
-          Batch mode checks TTB format compliance across multiple labels — government
-          warning, required fields, and country of origin for imports. To compare a
-          label against a specific COLA application record, use Single Label mode.
+          Use this mode when an importer submits multiple labels at once.
+          Drop all the images, run the check, and get a triage pass --
+          government warning, required fields, and country of origin for
+          detected imports. Labels that flag here need individual review
+          in Single Label mode against their COLA application record.
         </p>
 
         <div
@@ -250,7 +257,7 @@ export default function BatchQueue() {
           />
           <div className="upload-icon">&#8593;</div>
           <p>Drop label images here or click to browse</p>
-          <span>Select multiple files up to 50 labels per batch</span>
+          <span>Select multiple files -- up to 50 labels per batch</span>
         </div>
 
         {items.length > 0 && (

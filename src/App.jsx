@@ -3,6 +3,24 @@ import UploadZone from './components/UploadZone';
 import ResultCard from './components/ResultCard';
 import BatchQueue from './components/BatchQueue';
 
+const STEPS = {
+  single: [
+    'Upload the label image',
+    'Update fields to match the COLA application record',
+    'Run the compliance check',
+  ],
+  batch: [
+    'Drop all label images at once',
+    'Run the verification',
+    'Review results and export CSV',
+  ],
+};
+
+const INTROS = {
+  single: 'Upload a label image. The tool reads the label and populates the fields below. Update any fields to match the COLA application record, then run the compliance check.',
+  batch: 'Use batch mode when an importer submits multiple labels at once. Drop all the images, run the check, and get a triage pass across the full set. Flagged labels can then be opened individually in Single Label mode.',
+};
+
 export default function App() {
   const [mode, setMode] = useState('single');
   const [labelFile, setLabelFile] = useState(null);
@@ -144,7 +162,13 @@ export default function App() {
     setAiFilledFields(prev => ({ ...prev, [field]: false }));
   }
 
+  function handleModeChange(newMode) {
+    setMode(newMode);
+    handleClear();
+  }
+
   const canVerify = labelFile && applicationData.brandName && !verifying && !extracting;
+  const steps = STEPS[mode];
 
   return (
     <>
@@ -159,40 +183,33 @@ export default function App() {
       <main className="app-container">
         <div className="app-intro">
           <h1>Label Compliance Review</h1>
-          <p>
-            Upload a label image. The tool reads the label and populates the
-            fields below. Update any fields to match the COLA application
-            record, then run the compliance check.
-          </p>
+          <p>{INTROS[mode]}</p>
         </div>
 
         <div className="how-to-steps">
-          <div className="how-to-step">
-            <span className="step-number">1</span>
-            <span className="step-text">Upload the label image</span>
-          </div>
-          <div className="how-to-divider">--</div>
-          <div className="how-to-step">
-            <span className="step-number">2</span>
-            <span className="step-text">Update fields to match the COLA application record</span>
-          </div>
-          <div className="how-to-divider">--</div>
-          <div className="how-to-step">
-            <span className="step-number">3</span>
-            <span className="step-text">Run the compliance check</span>
-          </div>
+          {steps.map((text, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0', flex: i < steps.length - 1 ? 1 : 'none' }}>
+              <div className="how-to-step">
+                <span className="step-number">{i + 1}</span>
+                <span className="step-text">{text}</span>
+              </div>
+              {i < steps.length - 1 && (
+                <div className="how-to-divider">--</div>
+              )}
+            </div>
+          ))}
         </div>
 
         <div className="mode-toggle">
           <button
             className={mode === 'single' ? 'active' : ''}
-            onClick={() => setMode('single')}
+            onClick={() => handleModeChange('single')}
           >
             Single Label
           </button>
           <button
             className={mode === 'batch' ? 'active' : ''}
-            onClick={() => setMode('batch')}
+            onClick={() => handleModeChange('batch')}
           >
             Batch Upload
           </button>
