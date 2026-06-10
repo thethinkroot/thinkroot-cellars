@@ -1,9 +1,12 @@
+require('dotenv').config();
 const Anthropic = require('@anthropic-ai/sdk');
 const { checkGovernmentWarning } = require('../src/rules/ttbRules');
 const { fuzzyMatch } = require('../src/utils/fuzzyMatch');
 const { checkAbvTolerance } = require('../src/utils/abvTolerance');
 
-const client = new Anthropic();
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 const EXTRACTION_PROMPT = `You are a TTB label compliance assistant. Extract the following fields from this alcohol beverage label image. Return only valid JSON, no markdown, no explanation.
 
