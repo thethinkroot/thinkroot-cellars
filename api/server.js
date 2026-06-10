@@ -18,7 +18,7 @@ app.post('/api/verify', upload.single('label'), async (req, res) => {
     }
 
     const applicationData = JSON.parse(req.body.applicationData || '{}');
-    const result = await verifyLabel(req.file.buffer, applicationData);
+    const result = await verifyLabel(req.file.buffer, applicationData, req.file.mimetype);
     res.json(result);
 
   } catch (err) {
@@ -37,7 +37,7 @@ app.post('/api/verify-batch', upload.array('labels', 50), async (req, res) => {
 
     const results = await Promise.all(
       req.files.map((file, i) =>
-        verifyLabel(file.buffer, applicationDataList[i] || {})
+        verifyLabel(file.buffer, applicationDataList[i] || {}, file.mimetype)
           .then(result => ({ file: file.originalname, ...result }))
           .catch(err => ({ file: file.originalname, error: err.message }))
       )
@@ -51,7 +51,6 @@ app.post('/api/verify-batch', upload.array('labels', 50), async (req, res) => {
   }
 });
 
-// Serve built frontend in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../dist')));
   app.get('*', (req, res) => {

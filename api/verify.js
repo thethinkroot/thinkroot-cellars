@@ -34,7 +34,7 @@ Return format:
   "countryOfOrigin": "..."
 }`;
 
-async function verifyLabel(imageBuffer, applicationData) {
+async function verifyLabel(imageBuffer, applicationData, mimeType = 'image/jpeg') {
   const base64Image = imageBuffer.toString('base64');
 
   const response = await client.messages.create({
@@ -48,7 +48,7 @@ async function verifyLabel(imageBuffer, applicationData) {
             type: 'image',
             source: {
               type: 'base64',
-              media_type: 'image/jpeg',
+              media_type: mimeType,
               data: base64Image
             }
           },
@@ -76,51 +76,43 @@ async function verifyLabel(imageBuffer, applicationData) {
 function runComplianceChecks(extracted, application) {
   const checks = {};
 
-  // Brand name — fuzzy match, 90% threshold
   checks.brandName = fuzzyMatch(
     extracted.brandName,
     application.brandName,
     0.9
   );
 
-  // Class/type — fuzzy match
   checks.classType = fuzzyMatch(
     extracted.classType,
     application.classType,
     0.85
   );
 
-  // ABV — tolerance-based check
   checks.alcoholContent = checkAbvTolerance(
     extracted.alcoholContent,
     application.alcoholContent
   );
 
-  // Net contents — exact after normalization
   checks.netContents = fuzzyMatch(
     extracted.netContents,
     application.netContents,
     0.95
   );
 
-  // Bottler name — fuzzy match
   checks.bottlerName = fuzzyMatch(
     extracted.bottlerName,
     application.bottlerName,
     0.9
   );
 
-  // Bottler address — fuzzy match
   checks.bottlerAddress = fuzzyMatch(
     extracted.bottlerAddress,
     application.bottlerAddress,
     0.85
   );
 
-  // Government warning — exact check, no tolerance
   checks.governmentWarning = checkGovernmentWarning(extracted.governmentWarning);
 
-  // Country of origin — required for imports per 19 CFR part 134
   if (application.isImport) {
     checks.countryOfOrigin = extracted.countryOfOrigin
       ? { pass: true, reason: `Country of origin present: ${extracted.countryOfOrigin}` }
