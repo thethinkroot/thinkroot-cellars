@@ -22,18 +22,32 @@ function getIndicator(status) {
   return '~';
 }
 
-export default function ResultCard({ result }) {
+export default function ResultCard({ result, previewUrl, responseTime }) {
   const { pass, flagCount, checks, extracted } = result;
 
   return (
     <div className="card">
       <div className="results-header">
-        <div className="card-title" style={{ margin: 0 }}>
-          Compliance Results
+        <div className="results-header-left">
+          <div className="card-title" style={{ margin: 0 }}>
+            Compliance Results
+          </div>
+          <div className={`verdict ${pass ? 'pass' : 'fail'}`}>
+            {pass ? '✓ Cleared' : `✗ ${flagCount} Flag${flagCount !== 1 ? 's' : ''}`}
+          </div>
+          {responseTime && (
+            <div className="response-time">
+              Verified in <span>{responseTime}</span>
+            </div>
+          )}
         </div>
-        <div className={`verdict ${pass ? 'pass' : 'fail'}`}>
-          {pass ? '✓ Cleared' : `✗ ${flagCount} Flag${flagCount !== 1 ? 's' : ''}`}
-        </div>
+        {previewUrl && (
+          <img
+            src={previewUrl}
+            alt="Verified label"
+            className="label-thumbnail"
+          />
+        )}
       </div>
 
       <div className="check-list">
@@ -52,12 +66,7 @@ export default function ResultCard({ result }) {
                   {check?.reason || 'Not checked'}
                 </div>
                 {extracted?.[field] && status !== 'pass' && (
-                  <div style={{
-                    fontSize: '12px',
-                    color: 'var(--muted)',
-                    marginTop: '4px',
-                    fontStyle: 'italic'
-                  }}>
+                  <div className="check-extracted">
                     Found on label: "{extracted[field]}"
                   </div>
                 )}
@@ -69,18 +78,16 @@ export default function ResultCard({ result }) {
 
       {!pass && (
         <div style={{
-          marginTop: '20px',
-          padding: '14px 16px',
+          marginTop: '16px',
+          padding: '12px 14px',
           background: 'rgba(122, 31, 31, 0.08)',
           border: '1px solid rgba(212, 122, 122, 0.2)',
           borderRadius: 'var(--radius)',
-          fontSize: '13px',
+          fontSize: '12px',
           color: 'var(--copper-light)',
           lineHeight: '1.6'
         }}>
-          This label has {flagCount} issue{flagCount !== 1 ? 's' : ''} requiring
-          attention before approval. Review flagged fields and request a corrected
-          label submission where needed.
+          {flagCount} issue{flagCount !== 1 ? 's' : ''} require attention before approval. Review flagged fields and request a corrected label submission where needed.
         </div>
       )}
     </div>

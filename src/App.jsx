@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import UploadZone from './components/UploadZone';
 import ResultCard from './components/ResultCard';
 import BatchQueue from './components/BatchQueue';
@@ -6,8 +6,10 @@ import BatchQueue from './components/BatchQueue';
 export default function App() {
   const [mode, setMode] = useState('single');
   const [labelFile, setLabelFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(null);
+  const [aiFilledFields, setAiFilledFields] = useState({});
   const [applicationData, setApplicationData] = useState({
     brandName: '',
     classType: '',
@@ -20,13 +22,17 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState(null);
+  const [responseTime, setResponseTime] = useState(null);
+  const startTimeRef = useRef(null);
 
   async function handleFileSelect(file) {
     setLabelFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
     setResult(null);
     setError(null);
     setExtracted(null);
-
+    setAiFilledFields({});
+    setResponseTime(null);
     setExtracting(true);
 
     const formData = new FormData();
@@ -43,21 +49,44 @@ export default function App() {
       const data = await res.json();
       setExtracted(data);
 
-      setApplicationData(prev => ({
-        ...prev,
-        brandName: data.brandName || prev.brandName,
-        classType: data.classType || prev.classType,
-        alcoholContent: data.alcoholContent || prev.alcoholContent,
-        netContents: data.netContents || prev.netContents,
-        bottlerName: data.bottlerName || prev.bottlerName,
-        bottlerAddress: data.bottlerAddress || prev.bottlerAddress,
-      }));
+      const filled = {};
+      const updates = {};
 
-    } catch (err) {
-      // Silent fail on extraction — agent can still fill manually
+      const fields = ['brandName', 'classType', 'alcoholContent', 'netContents', 'bottlerName', 'bottlerAddress'];
+      fields.forEach(field => {
+        if (data[field]) {
+          updates[field] = data[field];
+          filled[field] = true;
+        }
+      });
+
+      setApplicationData(prev => ({ ...prev, ...updates }));
+      setAiFilledFields(filled);
+
+    } catch {
+      // Silent fail — agent fills manually
     } finally {
       setExtracting(false);
     }
+  }
+
+  function handleClear() {
+    setLabelFile(null);
+    setPreviewUrl(null);
+    setExtracted(null);
+    setAiFilledFields({});
+    setResult(null);
+    setError(null);
+    setResponseTime(null);
+    setApplicationData({
+      brandName: '',
+      classType: '',
+      alcoholContent: '',
+      netContents: '',
+      bottlerName: '',
+      bottlerAddress: '',
+      isImport: false,
+    });
   }
 
   async function handleVerify() {
@@ -66,6 +95,7 @@ export default function App() {
     setVerifying(true);
     setResult(null);
     setError(null);
+    startTimeRef.current = Date.now();
 
     const formData = new FormData();
     formData.append('label', labelFile);
@@ -83,6 +113,8 @@ export default function App() {
       }
 
       const data = await res.json();
+      const elapsed = ((Date.now() - startTimeRef.current) / 1000).toFixed(1);
+      setResponseTime(`${elapsed}s`);
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -93,6 +125,8 @@ export default function App() {
 
   function handleFieldChange(field, value) {
     setApplicationData(prev => ({ ...prev, [field]: value }));
+    // Field manually edited — remove AI-filled indicator
+    setAiFilledFields(prev => ({ ...prev, [field]: false }));
   }
 
   const canVerify = labelFile && applicationData.brandName && !verifying && !extracting;
@@ -111,7 +145,7 @@ export default function App() {
         <div className="app-intro">
           <h1>Label Compliance Review</h1>
           <p>
-            Upload a label image. Fields populate automatically from the label.
+            Upload a label image. Fields populate automatically.
             Review, correct if needed, then run the compliance check.
           </p>
         </div>
@@ -133,160 +167,128 @@ export default function App() {
 
         {mode === 'single' ? (
           <>
-            <div className="card">
-              <div className="card-title">Label Image</div>
-              <UploadZone
-                file={labelFile}
-                onFileSelect={handleFileSelect}
-              />
-              {extracting && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginTop: '14px',
-                  fontSize: '13px',
-                  color: 'var(--copper-light)'
-                }}>
-                  <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '1.5px', margin: 0 }} />
-                  Reading label fields...
+            <div className="workspace">
+              <div className="workspace-left">
+                <div className="card">
+                  <div className="card-title">Label Image</div>
+                  <UploadZone
+                    file={labelFile}
+                    previewUrl={previewUrl}
+                    onFileSelect={handleFileSelect}
+                    onClear={handleClear}
+                  />
+                  {extracting && (
+                    <div className="extraction-status reading">
+                      <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '1.5px', flexShrink: 0 }} />
+                      Reading label fields...
+                    </div>
+                  )}
+                  {extracted && !extracting && (
+                    <div className="extraction-status done">
+                      ✓ Fields populated from label — review before verifying
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div className="card-title" style={{ margin: 0 }}>Application Data</div>
-                {extracted && !extracting && (
-                  <span style={{
-                    fontSize: '11px',
-                    color: 'var(--pass)',
-                    background: 'var(--pass-bg)',
-                    border: '1px solid var(--pass-border)',
-                    padding: '3px 10px',
-                    borderRadius: '20px',
-                    fontWeight: '500',
-                    letterSpacing: '0.04em'
-                  }}>
-                    Fields populated from label
-                  </span>
+                {verifying && (
+                  <div className="card verifying">
+                    <div className="spinner" />
+                    Analyzing against TTB requirements...
+                  </div>
+                )}
+
+                {result && !verifying && (
+                  <ResultCard
+                    result={result}
+                    previewUrl={previewUrl}
+                    responseTime={responseTime}
+                  />
                 )}
               </div>
 
-              <div className="field-grid">
-                <div className="field-group">
-                  <label>Brand Name</label>
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    placeholder="e.g. Château ThinkRoot"
-                    value={applicationData.brandName}
-                    onChange={e => handleFieldChange('brandName', e.target.value)}
-                  />
-                </div>
+              <div className="workspace-right">
+                <div className="card">
+                  <div className="card-header-row">
+                    <div className="card-title" style={{ margin: 0 }}>Application Data</div>
+                    {Object.values(aiFilledFields).some(Boolean) && (
+                      <span style={{
+                        fontSize: '10px',
+                        color: 'var(--copper)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        letterSpacing: '0.04em'
+                      }}>
+                        <span style={{ fontSize: '8px' }}>◆</span> AI-assisted fields
+                      </span>
+                    )}
+                  </div>
 
-                <div className="field-group">
-                  <label>Class / Type</label>
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    placeholder="e.g. Bordeaux Supérieur AOC"
-                    value={applicationData.classType}
-                    onChange={e => handleFieldChange('classType', e.target.value)}
-                  />
-                </div>
+                  <div className="field-grid">
+                    {[
+                      { key: 'brandName', label: 'Brand Name', placeholder: 'e.g. Château ThinkRoot' },
+                      { key: 'classType', label: 'Class / Type', placeholder: 'e.g. Bordeaux Supérieur AOC' },
+                      { key: 'alcoholContent', label: 'Alcohol Content', placeholder: 'e.g. 13.5%' },
+                      { key: 'netContents', label: 'Net Contents', placeholder: 'e.g. 750 mL' },
+                      { key: 'bottlerName', label: 'Bottler / Importer Name', placeholder: 'e.g. ThinkRoot Cellars' },
+                      { key: 'bottlerAddress', label: 'Bottler / Importer Address', placeholder: 'e.g. San Diego, CA 92101' },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key} className="field-group">
+                        <label>{label}</label>
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          placeholder={placeholder}
+                          value={applicationData[key]}
+                          className={aiFilledFields[key] ? 'ai-filled' : ''}
+                          onChange={e => handleFieldChange(key, e.target.value)}
+                        />
+                      </div>
+                    ))}
 
-                <div className="field-group">
-                  <label>Alcohol Content</label>
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    placeholder="e.g. 13.5%"
-                    value={applicationData.alcoholContent}
-                    onChange={e => handleFieldChange('alcoholContent', e.target.value)}
-                  />
-                </div>
+                    <div className="field-group full-width">
+                      <label className="import-toggle">
+                        <input
+                          type="checkbox"
+                          checked={applicationData.isImport}
+                          onChange={e => handleFieldChange('isImport', e.target.checked)}
+                        />
+                        This is an imported wine — verify country of origin (19 CFR part 134)
+                      </label>
+                    </div>
+                  </div>
 
-                <div className="field-group">
-                  <label>Net Contents</label>
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    placeholder="e.g. 750 mL"
-                    value={applicationData.netContents}
-                    onChange={e => handleFieldChange('netContents', e.target.value)}
-                  />
-                </div>
+                  <button
+                    className="btn-verify"
+                    onClick={handleVerify}
+                    disabled={!canVerify}
+                  >
+                    {verifying ? 'Verifying...' : extracting ? 'Reading label...' : 'Run Compliance Check'}
+                  </button>
 
-                <div className="field-group">
-                  <label>Bottler / Importer Name</label>
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    placeholder="e.g. ThinkRoot Cellars"
-                    value={applicationData.bottlerName}
-                    onChange={e => handleFieldChange('bottlerName', e.target.value)}
-                  />
-                </div>
-
-                <div className="field-group">
-                  <label>Bottler / Importer Address</label>
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    placeholder="e.g. San Diego, CA 92101"
-                    value={applicationData.bottlerAddress}
-                    onChange={e => handleFieldChange('bottlerAddress', e.target.value)}
-                  />
-                </div>
-
-                <div className="field-group full-width">
-                  <label className="import-toggle">
-                    <input
-                      type="checkbox"
-                      checked={applicationData.isImport}
-                      onChange={e => handleFieldChange('isImport', e.target.checked)}
-                    />
-                    This is an imported wine — verify country of origin (19 CFR part 134)
-                  </label>
+                  {error && (
+                    <div style={{
+                      marginTop: '14px',
+                      padding: '12px 14px',
+                      background: 'rgba(122, 31, 31, 0.1)',
+                      border: '1px solid rgba(212, 122, 122, 0.25)',
+                      borderRadius: 'var(--radius)',
+                      fontSize: '12px',
+                      color: '#D47A7A',
+                      lineHeight: '1.6'
+                    }}>
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>
+                        Verification could not complete
+                      </strong>
+                      {error.includes('parse') || error.includes('unclear') || error.includes('extracted')
+                        ? 'The image did not contain readable label data. Upload a clear, straight-on photo of the label.'
+                        : error
+                      }
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <button
-                className="btn-verify"
-                onClick={handleVerify}
-                disabled={!canVerify}
-              >
-                {verifying ? 'Verifying...' : extracting ? 'Reading label...' : 'Run Compliance Check'}
-              </button>
             </div>
-
-            {verifying && (
-              <div className="card verifying">
-                <div className="spinner" />
-                Analyzing label against TTB requirements...
-              </div>
-            )}
-
-            {error && (
-              <div className="card">
-                <div style={{ fontSize: '13px', color: '#D47A7A', lineHeight: '1.6' }}>
-                  <strong style={{ display: 'block', marginBottom: '6px' }}>
-                    Verification could not complete
-                  </strong>
-                  {error.includes('parse') || error.includes('unclear') || error.includes('extracted')
-                    ? 'The image did not contain readable label data. Upload a clear, straight-on photo of the wine label.'
-                    : error.includes('authentication') || error.includes('API')
-                    ? 'Service configuration error. Please contact the administrator.'
-                    : error
-                  }
-                </div>
-              </div>
-            )}
-
-            {result && !verifying && (
-              <ResultCard result={result} />
-            )}
           </>
         ) : (
           <BatchQueue />
