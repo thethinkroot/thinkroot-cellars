@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { verifyLabel } = require('./verify');
 const upload = require('./upload');
 
@@ -49,6 +50,14 @@ app.post('/api/verify-batch', upload.array('labels', 50), async (req, res) => {
     res.status(500).json({ error: 'Batch verification failed', detail: err.message });
   }
 });
+
+// Serve built frontend in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`ThinkRoot Cellars — COLA Verify running on port ${PORT}`);
