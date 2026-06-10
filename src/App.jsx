@@ -60,8 +60,6 @@ export default function App() {
         }
       });
 
-      // Auto-detect imported wine from country of origin field
-      // Also detect from bottler name containing "import" when no country is stated
       const domestic = ['united states', 'usa', 'u.s.a', 'us'];
       const isImport = data.countryOfOrigin
         ? !domestic.some(d => data.countryOfOrigin.toLowerCase().includes(d))
@@ -76,7 +74,7 @@ export default function App() {
       setAiFilledFields(filled);
 
     } catch {
-      // Silent fail — agent fills manually
+      // Silent fail -- agent fills manually
     } finally {
       setExtracting(false);
     }
@@ -156,7 +154,7 @@ export default function App() {
         <div className="app-intro">
           <h1>Label Compliance Review</h1>
           <p>
-            Upload a label image. Fields populate automatically.
+            Upload a label image. Fields populate automatically from the label.
             Review, correct if needed, then run the compliance check.
           </p>
         </div>
@@ -204,7 +202,7 @@ export default function App() {
                   )}
                   {extracted && !extracting && (
                     <div className="extraction-status done">
-                      ✓ Fields populated from label — review before verifying
+                      Fields populated from label -- review before verifying
                     </div>
                   )}
                 </div>
@@ -249,15 +247,28 @@ export default function App() {
                         gap: '5px',
                         letterSpacing: '0.04em'
                       }}>
-                        <span style={{ fontSize: '8px' }}>◆</span> AI-assisted fields
+                        AI-assisted fields
                       </span>
                     )}
                   </div>
 
+                  <p style={{
+                    fontSize: '12px',
+                    color: 'var(--muted)',
+                    margin: '0 0 16px 0',
+                    lineHeight: '1.6',
+                    borderLeft: '2px solid rgba(197, 165, 114, 0.3)',
+                    paddingLeft: '12px'
+                  }}>
+                    Fields are populated from the label image. In production,
+                    these would come from the COLA application record. Review
+                    and correct any misread fields before running the check.
+                  </p>
+
                   <div className="field-grid">
                     {[
-                      { key: 'brandName', label: 'Brand Name', placeholder: 'e.g. Château ThinkRoot' },
-                      { key: 'classType', label: 'Class / Type', placeholder: 'e.g. Bordeaux Supérieur AOC' },
+                      { key: 'brandName', label: 'Brand Name', placeholder: 'e.g. Chateau ThinkRoot' },
+                      { key: 'classType', label: 'Class / Type', placeholder: 'e.g. Bordeaux Superieur AOC' },
                       { key: 'alcoholContent', label: 'Alcohol Content', placeholder: 'e.g. 13.5%' },
                       { key: 'netContents', label: 'Net Contents', placeholder: 'e.g. 750 mL' },
                       { key: 'bottlerName', label: 'Bottler / Importer Name', placeholder: 'e.g. ThinkRoot Cellars' },
@@ -283,14 +294,14 @@ export default function App() {
                           checked={applicationData.isImport}
                           onChange={e => handleFieldChange('isImport', e.target.checked)}
                         />
-                        This is an imported wine — verify country of origin (19 CFR part 134)
+                        This is an imported wine -- verify country of origin (19 CFR part 134)
                         {aiFilledFields.isImport && (
                           <span style={{
                             fontSize: '10px',
                             color: 'var(--copper)',
                             marginLeft: '6px'
                           }}>
-                            ◆ auto-detected
+                            auto-detected
                           </span>
                         )}
                       </label>
@@ -339,9 +350,15 @@ export default function App() {
       </main>
 
       <footer className="site-footer">
-        ThinkRoot Cellars · COLA Verify · Built by Chad Corriveau
+        ThinkRoot Cellars
         &nbsp;·&nbsp;
-        TTB compliance per 27 CFR 4.32, 4.34, CFR part 16 · Country of origin per 19 CFR part 134
+        COLA Verify
+        &nbsp;·&nbsp;
+        Built by Chad Corriveau
+        &nbsp;·&nbsp;
+        TTB compliance per 27 CFR 4.32, 4.34, CFR part 16
+        &nbsp;·&nbsp;
+        Country of origin per 19 CFR part 134
       </footer>
     </>
   );
