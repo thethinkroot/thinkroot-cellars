@@ -70,8 +70,8 @@ export default function App() {
         <div className="app-intro">
           <h1>Label Compliance Review</h1>
           <p>
-            Upload a label image and enter the application data. 
-            The tool checks each required field against TTB regulations 
+            Upload a label image and enter the application data.
+            The tool checks each required field against TTB regulations
             and flags anything that needs agent review.
           </p>
         </div>
@@ -108,6 +108,7 @@ export default function App() {
                   <label>Brand Name</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="e.g. Château ThinkRoot"
                     value={applicationData.brandName}
                     onChange={e => handleFieldChange('brandName', e.target.value)}
@@ -118,6 +119,7 @@ export default function App() {
                   <label>Class / Type</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="e.g. Bordeaux Supérieur AOC"
                     value={applicationData.classType}
                     onChange={e => handleFieldChange('classType', e.target.value)}
@@ -128,6 +130,7 @@ export default function App() {
                   <label>Alcohol Content</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="e.g. 13.5%"
                     value={applicationData.alcoholContent}
                     onChange={e => handleFieldChange('alcoholContent', e.target.value)}
@@ -138,6 +141,7 @@ export default function App() {
                   <label>Net Contents</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="e.g. 750 mL"
                     value={applicationData.netContents}
                     onChange={e => handleFieldChange('netContents', e.target.value)}
@@ -148,6 +152,7 @@ export default function App() {
                   <label>Bottler / Importer Name</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="e.g. ThinkRoot Cellars"
                     value={applicationData.bottlerName}
                     onChange={e => handleFieldChange('bottlerName', e.target.value)}
@@ -158,6 +163,7 @@ export default function App() {
                   <label>Bottler / Importer Address</label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="e.g. San Diego, CA 92101"
                     value={applicationData.bottlerAddress}
                     onChange={e => handleFieldChange('bottlerAddress', e.target.value)}
@@ -194,7 +200,21 @@ export default function App() {
 
             {error && (
               <div className="card">
-                <p style={{ color: '#D47A7A', fontSize: '14px' }}>{error}</p>
+                <div style={{
+                  fontSize: '13px',
+                  color: '#D47A7A',
+                  lineHeight: '1.6'
+                }}>
+                  <strong style={{ display: 'block', marginBottom: '6px' }}>
+                    Verification could not complete
+                  </strong>
+                  {error.includes('parse') || error.includes('unclear')
+                    ? 'The image did not contain readable label data. Upload a clear, straight-on photo of the wine label — not a screenshot, not a document, not a photo of a computer screen.'
+                    : error.includes('authentication') || error.includes('API')
+                    ? 'Service configuration error. Please contact the administrator.'
+                    : error
+                  }
+                </div>
               </div>
             )}
 
