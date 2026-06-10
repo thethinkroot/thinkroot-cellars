@@ -60,6 +60,18 @@ export default function App() {
         }
       });
 
+      // Auto-detect imported wine from country of origin field
+      if (data.countryOfOrigin) {
+        const domestic = ['united states', 'usa', 'u.s.a', 'us'];
+        const isImport = !domestic.some(d =>
+          data.countryOfOrigin.toLowerCase().includes(d)
+        );
+        if (isImport) {
+          updates.isImport = true;
+          filled.isImport = true;
+        }
+      }
+
       setApplicationData(prev => ({ ...prev, ...updates }));
       setAiFilledFields(filled);
 
@@ -125,7 +137,6 @@ export default function App() {
 
   function handleFieldChange(field, value) {
     setApplicationData(prev => ({ ...prev, [field]: value }));
-    // Field manually edited — remove AI-filled indicator
     setAiFilledFields(prev => ({ ...prev, [field]: false }));
   }
 
@@ -179,7 +190,15 @@ export default function App() {
                   />
                   {extracting && (
                     <div className="extraction-status reading">
-                      <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '1.5px', flexShrink: 0 }} />
+                      <div
+                        className="spinner"
+                        style={{
+                          width: '14px',
+                          height: '14px',
+                          borderWidth: '1.5px',
+                          flexShrink: 0
+                        }}
+                      />
                       Reading label fields...
                     </div>
                   )}
@@ -198,18 +217,29 @@ export default function App() {
                 )}
 
                 {result && !verifying && (
-                  <ResultCard
-                    result={result}
-                    previewUrl={previewUrl}
-                    responseTime={responseTime}
-                  />
+                  <>
+                    <ResultCard
+                      result={result}
+                      previewUrl={previewUrl}
+                      responseTime={responseTime}
+                    />
+                    <button
+                      className="btn-export"
+                      style={{ width: '100%', marginTop: '12px' }}
+                      onClick={handleClear}
+                    >
+                      Check Another Label
+                    </button>
+                  </>
                 )}
               </div>
 
               <div className="workspace-right">
                 <div className="card">
                   <div className="card-header-row">
-                    <div className="card-title" style={{ margin: 0 }}>Application Data</div>
+                    <div className="card-title" style={{ margin: 0 }}>
+                      Application Data
+                    </div>
                     {Object.values(aiFilledFields).some(Boolean) && (
                       <span style={{
                         fontSize: '10px',
@@ -254,6 +284,15 @@ export default function App() {
                           onChange={e => handleFieldChange('isImport', e.target.checked)}
                         />
                         This is an imported wine — verify country of origin (19 CFR part 134)
+                        {aiFilledFields.isImport && (
+                          <span style={{
+                            fontSize: '10px',
+                            color: 'var(--copper)',
+                            marginLeft: '6px'
+                          }}>
+                            ◆ auto-detected
+                          </span>
+                        )}
                       </label>
                     </div>
                   </div>
@@ -263,7 +302,11 @@ export default function App() {
                     onClick={handleVerify}
                     disabled={!canVerify}
                   >
-                    {verifying ? 'Verifying...' : extracting ? 'Reading label...' : 'Run Compliance Check'}
+                    {verifying
+                      ? 'Verifying...'
+                      : extracting
+                      ? 'Reading label...'
+                      : 'Run Compliance Check'}
                   </button>
 
                   {error && (

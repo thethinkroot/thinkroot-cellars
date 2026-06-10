@@ -1,9 +1,20 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function UploadZone({ file, previewUrl, onFileSelect, onClear }) {
   const [dragging, setDragging] = useState(false);
   const [typeError, setTypeError] = useState(null);
+  const [localPreview, setLocalPreview] = useState(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setLocalPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setLocalPreview(null);
+    }
+  }, [file]);
 
   function handleDrop(e) {
     e.preventDefault();
@@ -32,9 +43,18 @@ export default function UploadZone({ file, previewUrl, onFileSelect, onClear }) 
     onFileSelect(f);
   }
 
+  function handleClearLocal() {
+    setLocalPreview(null);
+    setTypeError(null);
+    if (inputRef.current) inputRef.current.value = '';
+    onClear();
+  }
+
+  const displayUrl = localPreview || previewUrl;
+
   return (
     <div>
-      {!previewUrl ? (
+      {!displayUrl ? (
         <div
           className={`upload-zone ${dragging ? 'dragging' : ''}`}
           onClick={() => inputRef.current.click()}
@@ -54,10 +74,10 @@ export default function UploadZone({ file, previewUrl, onFileSelect, onClear }) 
         </div>
       ) : (
         <div className="label-preview">
-          <img src={previewUrl} alt="Uploaded label" />
+          <img src={displayUrl} alt="Uploaded label" />
           <div className="label-preview-caption">
             <span>{file?.name}</span>
-            <button onClick={onClear}>Replace</button>
+            <button onClick={handleClearLocal}>Replace</button>
           </div>
         </div>
       )}
