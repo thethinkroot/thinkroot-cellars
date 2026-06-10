@@ -65,9 +65,10 @@ async function verifyLabel(imageBuffer, applicationData, mimeType = 'image/jpeg'
   let extracted;
 
   try {
-    extracted = JSON.parse(rawText);
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    extracted = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
   } catch {
-    throw new Error('Could not parse label data from image. The label may be unclear or at an angle.');
+    throw new Error('Label image received but fields could not be extracted. Please try a clearer photo.');
   }
 
   return runComplianceChecks(extracted, applicationData);
@@ -111,7 +112,9 @@ function runComplianceChecks(extracted, application) {
     0.85
   );
 
-  checks.governmentWarning = checkGovernmentWarning(extracted.governmentWarning);
+  checks.governmentWarning = checkGovernmentWarning(
+    extracted.governmentWarning
+  );
 
   if (application.isImport) {
     checks.countryOfOrigin = extracted.countryOfOrigin
