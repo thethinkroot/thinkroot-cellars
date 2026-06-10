@@ -12,13 +12,14 @@ const EXTRACTION_PROMPT = `You are a TTB label compliance assistant. Extract the
 
 Fields to extract:
 - brandName: the brand name as it appears on the label
-- classType: the class and type designation (e.g. "Bordeaux Supérieur AOC", "Kentucky Straight Bourbon Whiskey")
+- classType: the class and type designation (e.g. "Bordeaux Superieur AOC", "Kentucky Straight Bourbon Whiskey")
 - alcoholContent: ABV as shown on label (e.g. "13.5%")
 - netContents: volume (e.g. "750 mL")
 - bottlerName: name of bottler, producer, or importer
 - bottlerAddress: address of bottler, producer, or importer
 - governmentWarning: the full government warning text exactly as it appears
 - countryOfOrigin: country of origin if shown
+- isImportedProduct: true if the label contains the phrase "imported by" anywhere on the label, false otherwise
 
 If a field is not visible or legible, return null for that field.
 
@@ -31,7 +32,8 @@ Return format:
   "bottlerName": "...",
   "bottlerAddress": "...",
   "governmentWarning": "...",
-  "countryOfOrigin": "..."
+  "countryOfOrigin": "...",
+  "isImportedProduct": true
 }`;
 
 async function extractLabel(imageBuffer, mimeType = 'image/jpeg') {
@@ -118,10 +120,17 @@ function runComplianceChecks(extracted, application) {
     extracted.governmentWarning
   );
 
-  if (application.isImport) {
+  // Import detection: use application flag, extracted isImportedProduct field,
+  // or presence of "import" in the bottler name as fallback
+  const isImport =
+    application.isImport ||
+    extracted.isImportedProduct === true ||
+    (extracted.bottlerName || '').toLowerCase().includes('import');
+
+  if (isImport) {
     checks.countryOfOrigin = extracted.countryOfOrigin
       ? { pass: true, reason: `Country of origin present: ${extracted.countryOfOrigin}` }
-      : { pass: false, reason: 'Country of origin required for imported wine (19 CFR part 134) — not found on label' };
+      : { pass: false, reason: 'Country of origin required for imported wine (19 CFR part 134) -- not found on label' };
   }
 
   const flags = Object.entries(checks).filter(([, v]) => !v.pass);

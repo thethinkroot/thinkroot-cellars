@@ -61,9 +61,15 @@ export default function App() {
       });
 
       const domestic = ['united states', 'usa', 'u.s.a', 'us'];
-      const isImport = data.countryOfOrigin
-        ? !domestic.some(d => data.countryOfOrigin.toLowerCase().includes(d))
-        : (data.bottlerName || '').toLowerCase().includes('import');
+      const isImport =
+        // Explicit "imported by" phrase anywhere on label
+        data.isImportedProduct === true ||
+        // Non-domestic country of origin
+        (data.countryOfOrigin
+          ? !domestic.some(d => data.countryOfOrigin.toLowerCase().includes(d))
+          : false) ||
+        // Fallback: "import" in extracted bottler name
+        (data.bottlerName || '').toLowerCase().includes('import');
 
       if (isImport) {
         updates.isImport = true;
