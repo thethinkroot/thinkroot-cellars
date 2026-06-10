@@ -46,7 +46,7 @@ body {
     radial-gradient(ellipse at 80% 100%, rgba(107, 26, 42, 0.3) 0%, transparent 60%);
 }
 
-/* ── Header ── */
+/* -- Header -- */
 
 .site-header {
   border-bottom: 1px solid rgba(197, 165, 114, 0.2);
@@ -86,7 +86,7 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* ── Layout ── */
+/* -- Layout -- */
 
 .app-container {
   max-width: 1100px;
@@ -96,7 +96,7 @@ body {
 
 .app-intro {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 28px;
 }
 
 .app-intro h1 {
@@ -112,12 +112,64 @@ body {
 .app-intro p {
   font-size: 15px;
   color: var(--copper-light);
-  max-width: 520px;
+  max-width: 560px;
   margin: 0 auto;
   line-height: 1.6;
 }
 
-/* ── Two column workspace ── */
+/* -- How-to steps -- */
+
+.how-to-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 0 auto 36px;
+  max-width: 700px;
+  background: rgba(26, 5, 9, 0.35);
+  border: 1px solid rgba(197, 165, 114, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+}
+
+.how-to-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--garnet);
+  border: 1px solid rgba(197, 165, 114, 0.4);
+  color: var(--copper-light);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.step-text {
+  font-size: 12px;
+  color: var(--cream-dim);
+  line-height: 1.4;
+}
+
+.how-to-divider {
+  font-size: 11px;
+  color: rgba(197, 165, 114, 0.25);
+  padding: 0 12px;
+  flex-shrink: 0;
+  letter-spacing: 0.1em;
+}
+
+/* -- Two column workspace -- */
 
 .workspace {
   display: grid;
@@ -141,7 +193,7 @@ body {
   gap: 0;
 }
 
-/* ── Mode toggle ── */
+/* -- Mode toggle -- */
 
 .mode-toggle {
   display: flex;
@@ -173,7 +225,7 @@ body {
   color: var(--cream);
 }
 
-/* ── Card ── */
+/* -- Card -- */
 
 .card {
   background: rgba(26, 5, 9, 0.5);
@@ -192,7 +244,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* ── Upload zone ── */
+/* -- Upload zone -- */
 
 .upload-zone {
   border: 2px dashed rgba(197, 165, 114, 0.3);
@@ -231,7 +283,7 @@ body {
   display: none;
 }
 
-/* ── Label preview ── */
+/* -- Label preview -- */
 
 .label-preview {
   margin-top: 16px;
@@ -274,7 +326,7 @@ body {
   text-decoration: underline;
 }
 
-/* ── Extraction status ── */
+/* -- Extraction status -- */
 
 .extraction-status {
   display: flex;
@@ -300,7 +352,7 @@ body {
   color: #7CB87A;
 }
 
-/* ── Form fields ── */
+/* -- Form fields -- */
 
 .card-header-row {
   display: flex;
@@ -375,7 +427,7 @@ body {
   height: 15px;
 }
 
-/* ── Submit button ── */
+/* -- Submit button -- */
 
 .btn-verify {
   font-family: var(--font-ui);
@@ -404,7 +456,7 @@ body {
   cursor: not-allowed;
 }
 
-/* ── Results ── */
+/* -- Results -- */
 
 .results-header {
   display: flex;
@@ -551,7 +603,7 @@ body {
   font-style: italic;
 }
 
-/* ── Batch queue ── */
+/* -- Batch queue -- */
 
 .batch-list {
   display: flex;
@@ -607,7 +659,7 @@ body {
   background: rgba(197, 165, 114, 0.1);
 }
 
-/* ── Loading ── */
+/* -- Loading -- */
 
 .verifying {
   text-align: center;
@@ -639,7 +691,7 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ── Footer ── */
+/* -- Footer -- */
 
 .site-footer {
   text-align: center;
@@ -650,7 +702,7 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* ── Responsive ── */
+/* -- Responsive -- */
 
 @media (max-width: 768px) {
   .workspace {
@@ -675,5 +727,15 @@ body {
 
   .app-intro h1 {
     font-size: 30px;
+  }
+
+  .how-to-steps {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .how-to-divider {
+    display: none;
   }
 }

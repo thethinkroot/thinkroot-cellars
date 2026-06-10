@@ -160,9 +160,27 @@ export default function App() {
         <div className="app-intro">
           <h1>Label Compliance Review</h1>
           <p>
-            Upload a label image. Fields populate automatically from the label.
-            Review, correct if needed, then run the compliance check.
+            Upload a label image. The tool reads the label and populates the
+            fields below. Update any fields to match the COLA application
+            record, then run the compliance check.
           </p>
+        </div>
+
+        <div className="how-to-steps">
+          <div className="how-to-step">
+            <span className="step-number">1</span>
+            <span className="step-text">Upload the label image</span>
+          </div>
+          <div className="how-to-divider">--</div>
+          <div className="how-to-step">
+            <span className="step-number">2</span>
+            <span className="step-text">Update fields to match the COLA application record</span>
+          </div>
+          <div className="how-to-divider">--</div>
+          <div className="how-to-step">
+            <span className="step-number">3</span>
+            <span className="step-text">Run the compliance check</span>
+          </div>
         </div>
 
         <div className="mode-toggle">
@@ -242,7 +260,7 @@ export default function App() {
                 <div className="card">
                   <div className="card-header-row">
                     <div className="card-title" style={{ margin: 0 }}>
-                      Application Data
+                      COLA Application Record
                     </div>
                     {Object.values(aiFilledFields).some(Boolean) && (
                       <span style={{
@@ -266,9 +284,11 @@ export default function App() {
                     borderLeft: '2px solid rgba(197, 165, 114, 0.3)',
                     paddingLeft: '12px'
                   }}>
-                    Fields are populated from the label image. In production,
-                    these would come from the COLA application record. Review
-                    and correct any misread fields before running the check.
+                    These fields represent what the applicant submitted in their
+                    COLA record. The tool has pre-filled them from the label
+                    image -- update any field to match the actual application
+                    before running the check. The compliance check compares the
+                    label against these values.
                   </p>
 
                   <div className="field-grid">
