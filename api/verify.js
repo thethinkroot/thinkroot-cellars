@@ -130,7 +130,7 @@ function runComplianceChecks(extracted, application) {
   if (isImport) {
     checks.countryOfOrigin = extracted.countryOfOrigin
       ? { pass: true, reason: `Country of origin present: ${extracted.countryOfOrigin}` }
-      : { pass: false, reason: 'Country of origin required for imported wine (19 CFR part 134) -- not found on label' };
+      : { pass: false, reason: 'Country of origin required for imported products (19 CFR part 134) -- not found on label' };
   }
 
   const flags = Object.entries(checks).filter(([, v]) => !v.pass);
