@@ -109,6 +109,20 @@ No data persistence in this prototype. A production deployment would require doc
 
 ---
 
+## AI governance considerations
+
+This prototype uses the Anthropic Claude API for label field extraction. In a federal production context, that design raises three governance questions worth addressing directly.
+
+**Data boundary.** Label images submitted to this prototype are sent to a commercial API endpoint outside the federal network boundary. For a production deployment, this requires either routing requests through a FedRAMP-authorized instance of the model -- the existing Azure infrastructure Marcus noted is a natural landing zone -- or waiting on Anthropic's FedRAMP authorization path. The prototype is intentionally scoped as a standalone proof-of-concept and does not process any live COLA application data.
+
+**Human authority.** The tool surfaces findings; agents make decisions. No label is approved or rejected by the AI. Every result is presented as a recommendation for agent review, with plain-language explanations for each field so the agent understands exactly what was checked and why. This is not a stylistic choice -- it is the correct posture for AI in a federal regulatory workflow. Compliance authority stays with the agent.
+
+**Auditability.** The compliance rules engine is fully deterministic and separate from the AI extraction layer. The fuzzy match thresholds, ABV tolerance calculations, government warning check, and country of origin logic are all explicit, readable code in `src/rules/` and `src/utils/`. An auditor can verify exactly what the tool checks and how it reaches a result without inspecting model behavior. The AI handles extraction only -- pattern recognition on image content. Every compliance decision after that is rule-based and inspectable.
+
+**Data retention.** Images are processed in memory and discarded. No label artwork, extracted fields, or agent actions are stored by this prototype. A production deployment would require a formal data retention policy aligned with federal records management requirements and TTB's document retention schedule.
+
+---
+
 ## Test labels
 
 Six labels are included in the `test-labels/` folder covering wine, spirits, and all key compliance scenarios.
@@ -119,7 +133,7 @@ Six labels are included in the `test-labels/` folder covering wine, spirits, and
 | label-02-corriveau-reserve-gov-warning-fail.png | Government warning in title case | Single or Batch | Government Warning flagged |
 | label-03-stones-throw-fuzzy-match.png | Brand name all-caps on label vs mixed case in application | Single -- enter mixed case brand name manually | Near-match, cleared |
 | label-04-montalcino-noir-abv-tolerance.png | Label shows 14.5% ABV vs application showing 14.0% | Single -- enter 14.0% in Alcohol Content field | Within tolerance, cleared |
-| label-05-chateauneuf-reserve-missing-origin.png | No country of origin on imported wine | Single or Batch | Country of origin flagged |
+| label-05-chateauneuf-reserve-missing-origin.png | No country of origin on imported product | Single or Batch | Country of origin flagged |
 | label-06-old-tom-distillery-bourbon-proof.png | Distilled spirits label, ABV shown as 45% Alc./Vol. (90 Proof) | Single or Batch | Cleared |
 
 Labels 3 and 4 demonstrate scenarios that require application data different from the label -- which reflects how TTB agents actually work. The COLA application was submitted before the label arrives for review. The agent has the application record; the tool compares the label against it.
@@ -130,7 +144,9 @@ Label 6 demonstrates proof-format ABV handling for distilled spirits. The TTB br
 
 ## Production path
 
-Moving this from prototype to production would require COLA system API integration to eliminate manual application data entry, FedRAMP-authorized infrastructure (the current Azure environment is noted as post-2019 migration), PII handling and document retention policies, and formal accuracy benchmarking against the existing agent review workflow. The compliance rules engine is production-ready and would require minimal modification for a live deployment.
+Moving this from prototype to production would require four workstreams. COLA system API integration to replace manual application data entry -- eliminating the current self-fill model and enabling the compliance check to run automatically when an agent opens a case. FedRAMP-authorized infrastructure for the AI extraction layer, using the existing Azure environment as the deployment target. Formal data governance covering PII handling, document retention, and audit logging aligned with federal records requirements. And accuracy benchmarking against the existing agent review workflow to establish a baseline and track performance over time.
+
+The compliance rules engine itself -- the TTB field checks, fuzzy match logic, ABV tolerance parser, and government warning validation -- is production-ready and would require minimal modification for a live deployment.
 
 ---
 
