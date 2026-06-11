@@ -337,7 +337,7 @@ export default function App() {
                           checked={applicationData.isImport}
                           onChange={e => handleFieldChange('isImport', e.target.checked)}
                         />
-                        This is an imported wine -- verify country of origin (19 CFR part 134)
+                        This is an imported product -- verify country of origin (19 CFR part 134)
                         {aiFilledFields.isImport && (
                           <span style={{
                             fontSize: '10px',

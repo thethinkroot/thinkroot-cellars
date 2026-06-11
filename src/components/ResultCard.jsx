@@ -17,8 +17,8 @@ function getCheckStatus(check) {
 }
 
 function getIndicator(status) {
-  if (status === 'pass') return '✓';
-  if (status === 'fail') return '✗';
+  if (status === 'pass') return '\u2713';
+  if (status === 'fail') return '\u2717';
   return '~';
 }
 
@@ -33,7 +33,7 @@ export default function ResultCard({ result, previewUrl, responseTime }) {
             Compliance Results
           </div>
           <div className={`verdict ${pass ? 'pass' : 'fail'}`}>
-            {pass ? '✓ Cleared' : `✗ ${flagCount} Flag${flagCount !== 1 ? 's' : ''}`}
+            {pass ? 'Cleared' : `${flagCount} Flag${flagCount !== 1 ? 's' : ''}`}
           </div>
           {responseTime && (
             <div className="response-time">
@@ -67,7 +67,7 @@ export default function ResultCard({ result, previewUrl, responseTime }) {
                 </div>
                 {extracted?.[field] && status !== 'pass' && (
                   <div className="check-extracted">
-                    Found on label: "{extracted[field]}"
+                    Found on label: &quot;{extracted[field]}&quot;
                   </div>
                 )}
               </div>
