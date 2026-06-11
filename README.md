@@ -1,10 +1,10 @@
-# ThinkRoot Cellars -- COLA Verify
+# ThinkRoot Cellars: COLA Verify
 
 AI-powered TTB alcohol label compliance verification.
 
 **Live application:** https://thinkroot-cellars-production.up.railway.app
 
-Built by Chad Corriveau -- [github.com/thethinkroot](https://github.com/thethinkroot)
+Built by Chad Corriveau - [github.com/thethinkroot](https://github.com/thethinkroot)
 
 ---
 
@@ -27,21 +27,25 @@ Opens on `http://localhost:5173`. The Vite dev server proxies `/api` calls to Ex
 
 ## What I built and why
 
-The TTB reviews approximately 150,000 alcohol beverage label applications per year. A team of 47 agents handles all of them, spending a significant portion of their time on routine field verification -- confirming that what appears on a label matches what was submitted in the application. Sarah Chen described it directly: agents check that a number on a form matches a number on a label, over and over.
+150,000 applications a year. 47 agents. Half their day is confirming that a number on a form matches a number on a label.
 
-This tool automates the extraction and comparison work. An agent uploads a label image, the tool reads the required fields using Claude Vision and populates the application data fields automatically, then runs each field against TTB compliance rules. Flags are returned with plain-language explanations so the agent knows exactly what requires review and why.
+That is the problem. The previous vendor pilot failed not because the technology was wrong but because it was slow. Thirty to forty seconds per label, and agents went back to doing it by eye. Sarah was direct about the requirement: results in about 5 seconds or agents will not use it. Dave was direct about something else: the tool needs judgment, not just pattern matching. STONE'S THROW on a label versus Stone's Throw in an application is not a failure. It is obviously the same brand, and a tool that flags it as a mismatch will get ignored. Jenny flagged the government warning as the one place where exact is exact. All caps, word for word, no exceptions.
 
-The goal is to reduce time spent on routine matching so agents can focus on judgment calls that actually require expertise.
+I built toward those three constraints specifically. Fast extraction using Claude Vision. Fuzzy matching with tunable thresholds so case variation and minor formatting differences pass. Hard exact matching on the government warning because Jenny is right that people try to get creative with it.
+
+The wrapper concept, ThinkRoot Cellars as a fictional importer, gave me a concrete frame to build against. It also meant the test labels could cover real scenarios rather than abstract ones.
 
 ---
 
-## Single label vs batch mode
+## Two modes, two different problems
 
-**Single label mode** is designed for agent-assisted case review. The agent uploads a label and the tool extracts all fields from the image automatically. In production, the application data would be pre-populated from the COLA system record. The agent reviews the extracted fields, corrects anything misread, and runs the compliance check. The tool compares what appears on the label against the application data field by field.
+The single label and batch modes are not the same workflow presented twice. They solve different things.
 
-**Batch mode** is designed for high-volume importer submissions -- based on feedback about processing 200 to 300 label packages at once. Batch mode runs a TTB format compliance sweep across multiple labels without requiring individual application data entry. It checks government warning format, presence of required fields, and country of origin for detected imports. It is a triage pass, not a detailed application comparison. Labels that clear batch review may still require individual case review against their COLA application record.
+Single label mode is for case review. An agent has a COLA application open and needs to check the label artwork against it. The tool reads the label image, populates the application data fields automatically, and the agent reviews and corrects before running the check. In production, the application data would come directly from the COLA system. The auto-fill is a prototype stand-in for that integration. The compliance check then compares label against application, field by field, with a plain-language result for each one.
 
-These are two genuinely different workflows. Single label mode answers: does this label match what this applicant submitted? Batch mode answers: do all these labels meet TTB format requirements before we open individual applications?
+Batch mode is for the peak-season problem Sarah described, where an importer submits 200 or 300 labels at once. There is no practical way to run those against individual application records in a batch flow. What agents actually need is a fast triage pass: which of these have obvious format problems before we open individual cases? Batch mode runs TTB format compliance across the full set, covering government warning, required fields, and country of origin for detected imports, then returns a cleared or flagged result per label with expandable detail and CSV export.
+
+The distinction matters. Single label mode answers: does this label match what this applicant submitted? Batch mode answers: are there any obvious problems in this stack before we start opening applications?
 
 ---
 
@@ -58,7 +62,7 @@ These are two genuinely different workflows. Single label mode answers: does thi
 
 ---
 
-## Compliance rules implemented
+## Compliance rules
 
 | Field | Rule | Regulation |
 |---|---|---|
@@ -69,7 +73,7 @@ These are two genuinely different workflows. Single label mode answers: does thi
 | Bottler / importer name | Fuzzy match, 90% threshold | 27 CFR 4.34 |
 | Bottler / importer address | Fuzzy match, 85% threshold | 27 CFR 4.34 |
 | Government warning | Exact match required, all-caps GOVERNMENT WARNING: prefix enforced | 27 CFR part 16 |
-| Country of origin | Required for all imports, auto-detected and checked | 19 CFR part 134 |
+| Country of origin | Required for all imported products, auto-detected and checked | 19 CFR part 134 |
 
 ---
 
@@ -77,78 +81,78 @@ These are two genuinely different workflows. Single label mode answers: does thi
 
 - React and Vite (frontend)
 - Node.js and Express (API)
-- Claude Vision via Anthropic SDK -- claude-sonnet-4-5 (label extraction)
+- Claude Vision via Anthropic SDK, claude-sonnet-4-5 (label extraction)
 - Multer (image upload handling)
 - Deployed on Railway
 
 ---
 
-## Assumptions and decisions
+## Decisions worth explaining
 
-**Fuzzy match thresholds** were set based on stakeholder context. Brand name and bottler name use 90% -- tight enough to catch real mismatches, loose enough to handle minor formatting variation. Dave Morrison's example of STONE'S THROW vs Stone's Throw was the deciding factor. Government warning uses exact match with a hard check for the all-caps prefix, per Jenny Park's feedback that agents reject labels for title-case violations.
+**Fuzzy match thresholds.** Brand name and bottler name sit at 90%. Government warning is exact. Everything else falls between 85% and 95% depending on how much variation is reasonable for that field. The thresholds were not picked arbitrarily. Dave's STONE'S THROW example was the anchor. A tool that flags obvious case variation as a real mismatch will lose agent trust fast, and once it loses trust it gets ignored. The fuzzy thresholds are calibrated to surface real problems, not formatting noise.
 
-**ABV tolerance** follows TTB guidelines -- plus or minus 1.5% for products over 14% ABV, plus or minus 1.0% at or under. The parser handles three label formats: percentage only (13.5%), proof only (90 Proof), and combined (45% Alc./Vol. (90 Proof)). When both appear on the label, percentage takes precedence. Proof is converted to ABV by dividing by two. Most implementations hard-fail any ABV difference; this one applies the correct regulatory tolerance and explains the result to the agent.
+**ABV tolerance.** TTB allows plus or minus 1.5% for products over 14% ABV and plus or minus 1.0% at or under. Most implementations hard-fail any ABV difference, which is wrong and would generate false flags constantly. This one applies the actual regulatory tolerance and tells the agent exactly what the difference is and whether it falls within range. The parser also handles three label formats: percentage only, proof only, and combined. Proof divides by two. When both appear, percentage takes precedence. The brief's sample label showed the combined format explicitly, and that was not an accident.
 
-**Country of origin** is implemented as a CBP requirement under 19 CFR part 134, not a TTB requirement. The tool auto-detects imported products from the country of origin field or from the presence of an importer statement on the label. The check only runs when import status is confirmed.
+**Country of origin.** This is a CBP requirement under 19 CFR part 134, not a TTB requirement. The distinction matters because it changes what regulation you cite when you reject a label. Import detection runs three ways: explicit "imported by" phrase on the label, non-domestic country of origin in the extracted fields, or "import" in the bottler name as a fallback. The check only runs when one of those three conditions is true.
 
-**Auto-fill from image** fires immediately on upload before the agent fills any fields. This keeps the human in the loop while eliminating routine data entry. Fields populated by AI are marked with a copper indicator so the agent knows which values came from extraction versus which they entered manually.
+**Auto-fill and the human in the loop.** Fields populate automatically on upload, but the agent reviews them before anything runs. Fields that came from AI extraction are marked with a copper left border so the agent knows exactly which values to scrutinize. The tool eliminates the extraction work, not the agent's judgment. An agent who trusts the tool because it is transparent about what it did is more useful than one who rubber-stamps results because they cannot tell what happened.
 
-**No COLA system integration** -- this is a standalone prototype per the project scope. A production version would pull application data directly from the COLA system API, eliminating manual field entry entirely and enabling the compliance check to run automatically when an agent opens a case.
+**No COLA integration.** Standalone prototype, per the project scope. A production version would pull application data from the COLA system API and the manual field entry step disappears entirely.
 
 ---
 
 ## Trade-offs and limitations
 
-Image quality affects extraction accuracy. Blurry, angled, or low-light label photos produce incomplete field extraction.
+Response times in testing run 7 to 9 seconds. Sarah's requirement was about 5. The gap is real. A production deployment would address this through caching of common extraction patterns, a dedicated inference endpoint, and pre-population from the COLA system that eliminates the extraction round-trip for fields already in the record.
 
-The government warning check validates wording and capitalization but cannot verify font size, weight, or placement, which are also regulated under 27 CFR part 16.
+The government warning check validates wording and capitalization but cannot verify font size, weight, or placement. Those are also regulated under 27 CFR part 16 and would require a different detection approach, likely bounding box analysis, to check programmatically.
 
-Batch processing runs sequentially to stay within API rate limits. A production version would use a job queue for volume processing.
+Batch processing is sequential to stay within API rate limits. Production volume would require a job queue.
 
-No data persistence in this prototype. A production deployment would require document retention policies aligned with federal records requirements.
+Image quality affects extraction accuracy. The tool handles well-lit, straight-on label photos reliably. Angled shots, glare, and low resolution degrade extraction quality. Jenny raised this in her interview. It is a real workflow problem that a production version would need to address, likely through image preprocessing before the Vision call.
 
 ---
 
-## AI governance considerations
+## AI governance
 
-This prototype uses the Anthropic Claude API for label field extraction. In a federal production context, that design raises three governance questions worth addressing directly.
+The Claude API call is the part of this architecture that carries the most scrutiny in a federal context, and it should.
 
-**Data boundary.** Label images submitted to this prototype are sent to a commercial API endpoint outside the federal network boundary. For a production deployment, this requires either routing requests through a FedRAMP-authorized instance of the model -- the existing Azure infrastructure Marcus noted is a natural landing zone -- or waiting on Anthropic's FedRAMP authorization path. The prototype is intentionally scoped as a standalone proof-of-concept and does not process any live COLA application data.
+Every label image uploaded to this prototype leaves the network boundary and goes to a commercial API endpoint. That is acceptable for a proof-of-concept that does not touch live COLA application data. It is not acceptable for production. The path forward is routing extraction through a FedRAMP-authorized deployment. Anthropic is on that path, and the existing Azure infrastructure is the natural landing zone for a TTB production instance. Marcus flagged the Azure migration and the FedRAMP process in the same breath, which tells you the agency already knows how that conversation goes.
 
-**Human authority.** The tool surfaces findings; agents make decisions. No label is approved or rejected by the AI. Every result is presented as a recommendation for agent review, with plain-language explanations for each field so the agent understands exactly what was checked and why. This is not a stylistic choice -- it is the correct posture for AI in a federal regulatory workflow. Compliance authority stays with the agent.
+The more important governance point is the one baked into the architecture itself. The AI does one thing: it reads an image and returns field values. Every compliance decision after that, the fuzzy match comparison, the ABV tolerance calculation, the government warning check, the country of origin logic, is deterministic code in `src/rules/` and `src/utils/`. An auditor reviewing a rejected label can trace exactly what happened and why without any visibility into model behavior. That separation was intentional. In a regulatory workflow, you cannot have a black box making compliance calls. The AI handles the part that would otherwise be manual data entry. The rules handle the part that determines outcomes.
 
-**Auditability.** The compliance rules engine is fully deterministic and separate from the AI extraction layer. The fuzzy match thresholds, ABV tolerance calculations, government warning check, and country of origin logic are all explicit, readable code in `src/rules/` and `src/utils/`. An auditor can verify exactly what the tool checks and how it reaches a result without inspecting model behavior. The AI handles extraction only -- pattern recognition on image content. Every compliance decision after that is rule-based and inspectable.
-
-**Data retention.** Images are processed in memory and discarded. No label artwork, extracted fields, or agent actions are stored by this prototype. A production deployment would require a formal data retention policy aligned with federal records management requirements and TTB's document retention schedule.
+Nothing is stored. Images process in memory and discard. No label artwork, no extracted fields, no agent actions persist in this prototype. Production would need a formal retention policy tied to TTB's document schedule and federal records requirements. That is a policy question, not a hard technical problem.
 
 ---
 
 ## Test labels
 
-Six labels are included in the `test-labels/` folder covering wine, spirits, and all key compliance scenarios.
+Six labels in `test-labels/` covering wine, spirits, and all key compliance scenarios.
 
 | Label | Scenario | Mode | Expected result |
 |---|---|---|---|
 | label-01-chateau-thinkroot-clean-pass.png | All fields correct, imported French wine | Single | Cleared |
 | label-02-corriveau-reserve-gov-warning-fail.png | Government warning in title case | Single or Batch | Government Warning flagged |
-| label-03-stones-throw-fuzzy-match.png | Brand name all-caps on label vs mixed case in application | Single -- enter mixed case brand name manually | Near-match, cleared |
-| label-04-montalcino-noir-abv-tolerance.png | Label shows 14.5% ABV vs application showing 14.0% | Single -- enter 14.0% in Alcohol Content field | Within tolerance, cleared |
+| label-03-stones-throw-fuzzy-match.png | Brand name all-caps on label vs mixed case in application | Single, enter mixed case brand name manually | Near-match, cleared |
+| label-04-montalcino-noir-abv-tolerance.png | Label shows 14.5% ABV vs application showing 14.0% | Single, enter 14.0% in Alcohol Content field | Within tolerance, cleared |
 | label-05-chateauneuf-reserve-missing-origin.png | No country of origin on imported product | Single or Batch | Country of origin flagged |
-| label-06-old-tom-distillery-bourbon-proof.png | Distilled spirits label, ABV shown as 45% Alc./Vol. (90 Proof) | Single or Batch | Cleared |
+| label-06-old-tom-distillery-bourbon-proof.png | Distilled spirits, ABV shown as 45% Alc./Vol. (90 Proof) | Single or Batch | Cleared |
 
-Labels 3 and 4 demonstrate scenarios that require application data different from the label -- which reflects how TTB agents actually work. The COLA application was submitted before the label arrives for review. The agent has the application record; the tool compares the label against it.
+Labels 3 and 4 require manually entering application data that differs from the label, which is the actual TTB agent workflow. The COLA application was submitted before the label arrived. The agent has the record. The tool compares the label against it.
 
-Label 6 demonstrates proof-format ABV handling for distilled spirits. The TTB brief sample specifies this format explicitly; the compliance engine converts proof to ABV percentage for tolerance comparison.
+Label 6 covers distilled spirits and the proof-format ABV the brief's sample label specified. The compliance engine converts proof to percentage for the tolerance comparison.
 
 ---
 
 ## Production path
 
-Moving this from prototype to production would require four workstreams. COLA system API integration to replace manual application data entry -- eliminating the current self-fill model and enabling the compliance check to run automatically when an agent opens a case. FedRAMP-authorized infrastructure for the AI extraction layer, using the existing Azure environment as the deployment target. Formal data governance covering PII handling, document retention, and audit logging aligned with federal records requirements. And accuracy benchmarking against the existing agent review workflow to establish a baseline and track performance over time.
+The compliance rules engine is production-ready. The fuzzy match thresholds, ABV tolerance logic, government warning check, and country of origin detection would need minimal modification for a live deployment.
 
-The compliance rules engine itself -- the TTB field checks, fuzzy match logic, ABV tolerance parser, and government warning validation -- is production-ready and would require minimal modification for a live deployment.
+Everything else requires real work. COLA system API integration to replace manual field entry and enable automatic pre-population when an agent opens a case. FedRAMP-authorized infrastructure for the extraction layer, using the existing Azure environment as the deployment target. Data governance policy covering retention, audit logging, and PII handling. Accuracy benchmarking against the existing agent review workflow to establish a baseline before anything replaces manual review.
+
+The prototype demonstrates that the core approach works. Whether it works well enough to replace agent review on routine cases, and what the error rate looks like on edge cases, requires production data to answer.
 
 ---
 
-*Treasury take-home assessment -- IT Specialist (AI), 26-DO-12891471-DH.*
+*Treasury take-home assessment - IT Specialist (AI), 26-DO-12891471-DH.*
 *ThinkRoot Cellars is a fictional importer created for this project.*
